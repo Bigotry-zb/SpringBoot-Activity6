@@ -75,6 +75,7 @@ public class ActivitiTestApplicationTests {
     /**
      *  测试用户组添加
      */
+    // 测试
     @Test
     public void addGroup(){
         ProcessEngine processEngine = ProcessEngines.getDefaultProcessEngine();
