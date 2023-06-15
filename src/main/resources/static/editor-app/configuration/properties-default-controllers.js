@@ -1,27 +1,21 @@
-/*
- * Activiti Modeler component part of the Activiti project
- * Copyright 2005-2014 Alfresco Software, Ltd. All rights reserved.
+/* Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
-
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 /*
  * String controller
  */
 
-var KisBpmStringPropertyCtrl = [ '$scope', function ($scope) {
+angular.module('activitiModeler').controller('KisBpmStringPropertyCtrl', [ '$scope', function ($scope) {
 
 	$scope.shapeId = $scope.selectedShape.id;
 	$scope.valueFlushed = false;
@@ -35,10 +29,12 @@ var KisBpmStringPropertyCtrl = [ '$scope', function ($scope) {
     };
 
     $scope.enterPressed = function(keyEvent) {
-    	if (keyEvent && keyEvent.which === 13) {
-    		keyEvent.preventDefault();
-	        $scope.inputBlurred(); // we want to do the same as if the user would blur the input field
-    	}
+        // if enter is pressed
+        if (keyEvent && keyEvent.which === 13) {
+            keyEvent.preventDefault();
+            $scope.inputBlurred(); // we want to do the same as if the user would blur the input field
+        }
+        // else; do nothing
     };
     
     $scope.$on('$destroy', function controllerDestroyed() {
@@ -50,13 +46,13 @@ var KisBpmStringPropertyCtrl = [ '$scope', function ($scope) {
     	}
     });
 
-}];
+}]);
 
 /*
  * Boolean controller
  */
 
-var KisBpmBooleanPropertyCtrl = ['$scope', function ($scope) {
+angular.module('activitiModeler').controller('KisBpmBooleanPropertyCtrl', ['$scope', function ($scope) {
 
     $scope.changeValue = function() {
         if ($scope.property.key === 'oryx-defaultflow' && $scope.property.value) {
@@ -84,13 +80,13 @@ var KisBpmBooleanPropertyCtrl = ['$scope', function ($scope) {
         $scope.updatePropertyInModel($scope.property);
     };
 
-}];
+}]);
 
 /*
  * Text controller
  */
 
-var KisBpmTextPropertyCtrl = [ '$scope', '$modal', function($scope, $modal) {
+angular.module('activitiModeler').controller('KisBpmTextPropertyCtrl', [ '$scope', '$modal', function($scope, $modal) {
 
     var opts = {
         template:  'editor-app/configuration/properties/text-popup.html?version=' + Date.now(),
@@ -98,10 +94,10 @@ var KisBpmTextPropertyCtrl = [ '$scope', '$modal', function($scope, $modal) {
     };
 
     // Open the dialog
-    $modal(opts);
-}];
+    _internalCreateModal(opts, $modal, $scope);
+}]);
 
-var KisBpmTextPropertyPopupCtrl = ['$scope', function($scope) {
+angular.module('activitiModeler').controller('KisBpmTextPropertyPopupCtrl', ['$scope', function($scope) {
     
     $scope.save = function() {
         $scope.updatePropertyInModel($scope.property);
@@ -112,4 +108,4 @@ var KisBpmTextPropertyPopupCtrl = ['$scope', function($scope) {
         $scope.property.mode = 'read';
         $scope.$hide();
     };
-}];
+}]);

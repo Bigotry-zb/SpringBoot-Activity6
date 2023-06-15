@@ -1,35 +1,29 @@
-/*
- * Activiti Modeler component part of the Activiti project
- * Copyright 2005-2014 Alfresco Software, Ltd. All rights reserved.
+/* Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
-
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 'use strict';
 
 var KISBPM = KISBPM || {};
 KISBPM.TOOLBAR = {
     ACTIONS: {
-
+    	
         saveModel: function (services) {
 
-            var modal = services.$modal({
+            _internalCreateModal({
                 backdrop: true,
                 keyboard: true,
                 template: 'editor-app/popups/save-model.html?version=' + Date.now(),
                 scope: services.$scope
-            });
+            }, services.$modal, services.$scope);
         },
 
         undo: function (services) {
@@ -186,6 +180,9 @@ KISBPM.TOOLBAR = {
 
         addBendPoint: function (services) {
 
+            // Show the tutorial the first time
+            ACTIVITI_EDITOR_TOUR.sequenceFlowBendpoint(services.$scope, services.$translate, services.$q, true);
+
             var dockerPlugin = KISBPM.TOOLBAR.ACTIONS._getOryxDockerPlugin(services.$scope);
 
             var enableAdd = !dockerPlugin.enabledAdd();
@@ -202,6 +199,9 @@ KISBPM.TOOLBAR = {
         },
 
         removeBendPoint: function (services) {
+
+            // Show the tutorial the first time
+            ACTIVITI_EDITOR_TOUR.sequenceFlowBendpoint(services.$scope, services.$translate, services.$q, true);
 
             var dockerPlugin = KISBPM.TOOLBAR.ACTIONS._getOryxDockerPlugin(services.$scope);
 
@@ -259,11 +259,9 @@ KISBPM.TOOLBAR = {
         sameSize: function (services) {
         	KISBPM.TOOLBAR.ACTIONS._getOryxArrangmentPlugin(services.$scope).alignShapes([ORYX.CONFIG.EDITOR_ALIGN_SIZE]);
         },
-        
-        closeEditor: function(services) {
-        	//window.location.href = "./";
-        	if(window.confirm('请确认数据是否已经保存，确定要关闭编辑器吗？'))
-			window.close();
+
+        help: function (services) {
+            ACTIVITI_EDITOR_TOUR.gettingStarted(services.$scope, services.$translate, services.$q);
         },
         
         /**
@@ -294,7 +292,7 @@ KISBPM.TOOLBAR = {
 };
 
 /** Custom controller for the save dialog */
-var SaveModelCtrl = [ '$rootScope', '$scope', '$http', '$route', '$location',
+angular.module('activitiModeler').controller('SaveModelCtrl', [ '$rootScope', '$scope', '$http', '$route', '$location',
     function ($rootScope, $scope, $http, $route, $location) {
 
     var modelMetaData = $scope.editor.getModelMetaData();
@@ -304,8 +302,13 @@ var SaveModelCtrl = [ '$rootScope', '$scope', '$http', '$route', '$location',
     	description = modelMetaData.description;
     }
     
-    var saveDialog = { 'name' : modelMetaData.name,
-            'description' : description};
+    var saveDialog = { 
+    	'name' : modelMetaData.name,
+    	'key' : modelMetaData.key,
+        'description' : description,
+        'newVersion' : false,
+        'comment' : ''
+    };
     
     $scope.saveDialog = saveDialog;
     
@@ -317,7 +320,7 @@ var SaveModelCtrl = [ '$rootScope', '$scope', '$http', '$route', '$location',
         json_xml: json,
         name: 'model'
     };
-
+    
     $scope.status = {
         loading: false
     };
@@ -328,14 +331,15 @@ var SaveModelCtrl = [ '$rootScope', '$scope', '$http', '$route', '$location',
 
     $scope.saveAndClose = function () {
     	$scope.save(function() {
-    		//window.location.href = "./";
-    		if(window.confirm('请确认数据是否已经保存，确定要关闭编辑器吗？'))
-    			window.close();
+    		$location.path('/processes');
     	});
     };
+    
     $scope.save = function (successCallback) {
 
-        if (!$scope.saveDialog.name || $scope.saveDialog.name.length == 0) {
+        if (!$scope.saveDialog.name || $scope.saveDialog.name.length == 0 ||
+        	!$scope.saveDialog.key || $scope.saveDialog.key.length == 0) {
+        	
             return;
         }
 
@@ -345,42 +349,32 @@ var SaveModelCtrl = [ '$rootScope', '$scope', '$http', '$route', '$location',
         };
         
         modelMetaData.name = $scope.saveDialog.name;
+        modelMetaData.key = $scope.saveDialog.key;
         modelMetaData.description = $scope.saveDialog.description;
 
         var json = $scope.editor.getJSON();
         json = JSON.stringify(json);
-        
-        var selection = $scope.editor.getSelection();
-        $scope.editor.setSelection([]);
-        
-        // Get the serialized svg image source
-        var svgClone = $scope.editor.getCanvas().getSVGRepresentation(true);
-        $scope.editor.setSelection(selection);
-        if ($scope.editor.getCanvas().properties["oryx-showstripableelements"] === false) {
-            var stripOutArray = jQuery(svgClone).find(".stripable-element");
-            for (var i = stripOutArray.length - 1; i >= 0; i--) {
-            	stripOutArray[i].remove();
+
+        var params = {
+            modeltype: modelMetaData.model.modelType,
+            json_xml: json,
+            name: $scope.saveDialog.name,
+            key: $scope.saveDialog.key,
+            description: $scope.saveDialog.description,
+            newversion: $scope.saveDialog.newVersion,
+            comment: $scope.saveDialog.comment,
+            lastUpdated: modelMetaData.lastUpdated
+        };
+
+        if ($scope.error && $scope.error.isConflict) {
+            params.conflictResolveAction = $scope.error.conflictResolveAction;
+            if ($scope.error.conflictResolveAction === 'saveAs') {
+                params.saveAs = $scope.error.saveAs;
             }
         }
 
-        // Remove all forced stripable elements
-        var stripOutArray = jQuery(svgClone).find(".stripable-element-force");
-        for (var i = stripOutArray.length - 1; i >= 0; i--) {
-            stripOutArray[i].remove();
-        }
-
-        // Parse dom to string
-        var svgDOM = DataManager.serialize(svgClone);
-
-        var params = {
-            json_xml: json,
-            svg_xml: svgDOM,
-            name: $scope.saveDialog.name,
-            description: $scope.saveDialog.description
-        };
-
         // Update
-        $http({    method: 'PUT',
+        $http({    method: 'POST',
             data: params,
             ignoreErrors: true,
             headers: {'Accept': 'application/json',
@@ -399,6 +393,7 @@ var SaveModelCtrl = [ '$rootScope', '$scope', '$http', '$route', '$location',
                     type: ORYX.CONFIG.EVENT_SAVED
                 });
                 $scope.modelData.name = $scope.saveDialog.name;
+                $scope.modelData.key = $scope.saveDialog.key;
                 $scope.modelData.lastUpdated = data.lastUpdated;
                 
                 $scope.status.loading = false;
@@ -424,10 +419,48 @@ var SaveModelCtrl = [ '$rootScope', '$scope', '$http', '$route', '$location',
 
             })
             .error(function (data, status, headers, config) {
-                $scope.error = {};
-                console.log('Something went wrong when updating the process model:' + JSON.stringify(data));
+                if (status == 409) {
+                	$scope.error = {};
+                    $scope.error.isConflict = true;
+                    $scope.error.userFullName = data.customData.userFullName;
+                    $scope.error.isNewVersionAllowed = data.customData.newVersionAllowed;
+                    $scope.error.saveAs = modelMetaData.name + "_2";
+                } else {
+                	$scope.error = undefined;
+                    $scope.saveDialog.errorMessage = data.message;
+                }
                 $scope.status.loading = false;
             });
     };
 
-}];
+    $scope.isOkButtonDisabled = function() {
+        if ($scope.status.loading) {
+            return false;
+        } else if ($scope.error && $scope.error.conflictResolveAction) {
+            if ($scope.error.conflictResolveAction === 'saveAs') {
+                return !$scope.error.saveAs || $scope.error.saveAs.length == 0;
+            } else {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    $scope.okClicked = function() {
+        if ($scope.error) {
+            if ($scope.error.conflictResolveAction === 'discardChanges') {
+                $scope.close();
+                $route.reload();
+            } else if ($scope.error.conflictResolveAction === 'overwrite'
+                || $scope.error.conflictResolveAction === 'newVersion') {
+                $scope.save();
+            } else if($scope.error.conflictResolveAction === 'saveAs') {
+                $scope.save(function() {
+                    $rootScope.ignoreChanges = true;  // Otherwise will get pop up that changes are not saved.
+                    $location.path('/processes');
+                });
+            }
+        }
+    };
+
+}]);

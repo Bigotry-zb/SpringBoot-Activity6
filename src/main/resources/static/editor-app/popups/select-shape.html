@@ -7,9 +7,7 @@
                 <h2>Change shape to:</h2>
             </div>
             <div class="modal-body">
-            
-                   <div class="kis-listener-grid" ng-grid="gridOptions"></div>
-            
+                <div ng-if="gridOptions" class="kis-listener-grid" ui-grid="gridOptions" ui-grid-selection></div> 
             </div>
             <div class="modal-footer">
                 <button ng-click="cancel()" class="btn btn-primary" translate>ACTION.CANCEL</button>
