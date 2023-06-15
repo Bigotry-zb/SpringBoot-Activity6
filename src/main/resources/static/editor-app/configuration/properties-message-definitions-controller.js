@@ -1,20 +1,14 @@
-/*
- * Activiti Modeler component part of the Activiti project
- * Copyright 2005-2014 Alfresco Software, Ltd. All rights reserved.
+/* Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
-
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 /*
@@ -30,7 +24,7 @@ angular.module('activitiModeler').controller('ActivitiMessageDefinitionsCtrl', [
     };
 
     // Open the dialog
-    $modal(opts);
+    _internalCreateModal(opts, $modal, $scope);
 }]);
 
 //Need a separate controller for the modal window due to https://github.com/angular-ui/bootstrap/issues/259
@@ -55,7 +49,7 @@ angular.module('activitiModeler').controller('ActivitiMessageDefinitionsPopupCtr
         }
 
         // Array to contain selected mesage definitions (yes - we only can select one, but ng-grid isn't smart enough)
-        $scope.selectedMessages = [];
+        $scope.selectedMessageDefinition = undefined;
         $scope.translationsRetrieved = false;
 
         $scope.labels = {};
@@ -69,18 +63,28 @@ angular.module('activitiModeler').controller('ActivitiMessageDefinitionsPopupCtr
             $scope.labels.nameLabel = results[1];
             $scope.translationsRetrieved = true;
 
-         // Config for grid
+            // Config for grid
             $scope.gridOptions = {
-                data: 'messageDefinitions',
+                data: $scope.messageDefinitions,
                 headerRowHeight: 28,
                 enableRowSelection: true,
                 enableRowHeaderSelection: false,
                 multiSelect: false,
-                keepLastSelected : false,
-                selectedItems: $scope.selectedMessages,
+                modifierKeysToMultiSelect: false,
+                enableHorizontalScrollbar: 0,
+                enableColumnMenus: false,
+                enableSorting: false,
                 columnDefs: [
                     {field: 'id', displayName: $scope.labels.idLabel},
                     {field: 'name', displayName: $scope.labels.nameLabel}]
+            };
+
+            $scope.gridOptions.onRegisterApi = function (gridApi) {
+                //set gridApi on scope
+                $scope.gridApi = gridApi;
+                gridApi.selection.on.rowSelectionChanged($scope, function (row) {
+                    $scope.selectedMessageDefinition = row.entity;
+                });
             };
         });
 
@@ -90,23 +94,27 @@ angular.module('activitiModeler').controller('ActivitiMessageDefinitionsPopupCtr
 
             $scope.messageDefinitions.push(newMessageDefinition);
             $timeout(function () {
-            	$scope.gridOptions.selectItem($scope.messageDefinitions.length - 1, true);
+                $scope.gridApi.selection.toggleRowSelection(newMessageDefinition);
             });
         };
 
         // Click handler for remove button
         $scope.removeMessageDefinition = function () {
-        	if ($scope.selectedMessages && $scope.selectedMessages.length > 0) {
-            	var index = $scope.messageDefinitions.indexOf($scope.selectedMessages[0]);
-                $scope.gridOptions.selectItem(index, false);
+            var selectedItems = $scope.gridApi.selection.getSelectedRows();
+            if (selectedItems && selectedItems.length > 0) {
+                var index = $scope.messageDefinitions.indexOf(selectedItems[0]);
+                $scope.gridApi.selection.toggleRowSelection(selectedItems[0]);
                 $scope.messageDefinitions.splice(index, 1);
 
-                $scope.selectedMessages.length = 0;
-                if (index < $scope.messageDefinitions.length) {
-                    $scope.gridOptions.selectItem(index + 1, true);
-                } else if ($scope.messageDefinitions.length > 0) {
-                    $scope.gridOptions.selectItem(index - 1, true);
+                if ($scope.messageDefinitions.length == 0) {
+                    $scope.selectedMesageDefinition = undefined;
                 }
+
+                $timeout(function () {
+                    if ($scope.messageDefinitions.length > 0) {
+                        $scope.gridApi.selection.toggleRowSelection($scope.messageDefinitions[0]);
+                    }
+                });
             }
         };
 

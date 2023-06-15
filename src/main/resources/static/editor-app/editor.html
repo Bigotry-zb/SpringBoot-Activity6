@@ -1,4 +1,5 @@
-<div ng-controller="StencilController">
+
+<div ng-controller="StencilController" ng-cloak="">
   <div class="subheader editor-toolbar" id="editor-header">
   	<div class="btn-group">
 	    <div class="btn-toolbar pull-left" ng-controller="ToolbarController" ng-cloak>
@@ -32,10 +33,10 @@
                     <div ng-repeat="group in stencilItemGroups">
 
                         <ul ng-if="group.visible && group.items" class="stencil-group"  ng-class="{collapsed: !group.expanded, 'first': $first}">
-                            <li ng-include="'editor-app/partials/stencil-item-template.html?version=4'"></li>
+                            <li ng-include="'editor-app/partials/stencil-item-template.html?version=6'"></li>
                         </ul>
 
-                        <div ng-if="!group.items" ng-include="'editor-app/partials/root-stencil-item-template.html?version=4'"></div>
+                        <div ng-if="!group.items" ng-include="'editor-app/partials/root-stencil-item-template.html?version=6'"></div>
 
                     </div>
 			    </div>
@@ -43,14 +44,14 @@
 	                <ul class="stencil-group">
 	                    <li ng-repeat="item in stencilItemGroups[0].paletteItems" class="stencil-item"
 	                         id="{{item.id}}"
-	                         title="{{item.description}}"
+	                         title="{{item.description | translate}}"
 	                         ng-model="draggedElement"
 	                         data-drag="true"
 	                         jqyoui-draggable="{onStart:'startDragCallback', onDrag:'dragCallback'}"
 	                         data-jqyoui-options="{revert: 'invalid', helper: 'clone', opacity : 0.5}">
-	                         
-	                        <img ng-src="editor-app/stencilsets/bpmn2.0/icons/{{item.icon}}" width="16px;" height="16px;"/>
-	                        {{item.name}}
+	                        <img ng-if="!item.customIcon" ng-src="editor-app/stencilsets/bpmn2.0/icons/{{item.icon}}" width="16px;" height="16px;"/>
+	                        <img ng-if="item.customIcon" ng-src="{{config.contextRoot}}/app/rest/image/{{item.icon}}" width="16px;" height="16px;"/>
+	                        {{item.name | translate}}
 	                    </li>
                     </ul>
 			     </div>
@@ -81,7 +82,7 @@
             	<div class="Oryx_button"
             		 ng-repeat="item in quickMenuItems"
 	                 id="{{item.id}}"
-	                 title="{{item.description}}"
+	                 title="{{item.description | translate}}"
 	                 ng-click="quickAddItem(item.id)"
             	     ng-model="draggedElement"
 	                 data-drag="true"
@@ -115,8 +116,8 @@
 	                        <div>
 	                             <div class="property-row" ng-repeat="property in selectedItem.properties"
 	                                ng-click="propertyClicked($index)" ng-class="{'clear' : $index%2 == 0}">
-	                                <span class="title" ng-if="!property.hidden">{{ property.title }}&nbsp;:</span>
-	                                <span class="title-removed" ng-if="property.hidden"><i>{{ property.title }}&nbsp;({{'PROPERTY.REMOVED' | translate}})&nbsp;:</i></span>
+	                                <span class="title" ng-if="!property.hidden" title="{{ property.description | translate }}">{{ property.title | translate }}&nbsp;:</span>
+	                                <span class="title-removed" ng-if="property.hidden"><i>{{ property.title | translate }}&nbsp;({{'PROPERTY.REMOVED' | translate}})&nbsp;:</i></span>
 	                                <span class="value"> 
 	                                    <ng-include
 	                                        src="getPropertyTemplateUrl($index)" ng-if="!property.hasReadWriteMode"></ng-include>

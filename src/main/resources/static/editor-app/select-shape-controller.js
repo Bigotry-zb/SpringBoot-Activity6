@@ -1,57 +1,64 @@
-/*
- * Activiti Modeler component part of the Activiti project
- * Copyright 2005-2014 Alfresco Software, Ltd. All rights reserved.
+/* Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
-
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 /*
  * Controller for morph shape selection
  */
 
-var KisBpmShapeSelectionCtrl = [ '$rootScope', '$scope', '$timeout', '$translate', function($rootScope, $scope, $timeout, $translate) {
+angular.module('activitiModeler').controller('KisBpmShapeSelectionCtrl',
+    [ '$rootScope', '$scope', '$timeout', '$translate', function($rootScope, $scope, $timeout, $translate) {
 
-    $scope.selectedMorphShapes = [];
+    $scope.currentSelectedMorph = undefined;
     
     $scope.availableMorphShapes = [];
 
-    for (var i = 0; i < $scope.morphShapes.length; i++)
-    {
-    	if ($scope.morphShapes[i].id != $scope.currentSelectedShape.getStencil().idWithoutNs())
-    	{
+    for (var i = 0; i < $scope.morphShapes.length; i++) {
+    	if ($scope.morphShapes[i].id != $scope.currentSelectedShape.getStencil().idWithoutNs()) {
     		$scope.availableMorphShapes.push($scope.morphShapes[i]);
     	}
     }
     	
     // Config for grid
     $scope.gridOptions = {
-        data: 'availableMorphShapes',
-        enableRowReordering: true,
+        data: $scope.availableMorphShapes,
         headerRowHeight: 28,
+        enableRowSelection: true,
+        enableRowHeaderSelection: false,
         multiSelect: false,
-        keepLastSelected : false,
-        selectedItems: $scope.selectedMorphShapes,
+        modifierKeysToMultiSelect: false,
+        enableHorizontalScrollbar: 0,
+		enableColumnMenus: false,
+		enableSorting: false,
         columnDefs: [{ field: 'objectId', displayName: 'Icon', width: 50, cellTemplate: 'editor-app/popups/icon-template.html?version=' + Date.now() },
-            { field: 'name', displayName: 'Name'}]
+            { field: 'name', displayName: 'Name', cellTemplate: '<div class="ui-grid-cell-contents">{{"" + row.entity[col.field] | translate}}</div>'}]
+    };
+    
+    $scope.gridOptions.onRegisterApi = function(gridApi) {
+        //set gridApi on scope
+        $scope.gridApi = gridApi;
+        gridApi.selection.on.rowSelectionChanged($scope, function(row) {
+            if (row.isSelected) {
+                $scope.currentSelectedMorph = row.entity;
+            } else {
+                $scope.currentSelectedMorph = undefined;
+            }
+        });
     };
 
     // Click handler for save button
     $scope.select = function() {
 
-        if ($scope.selectedMorphShapes.length > 0) 
-        {
+        if ($scope.currentSelectedMorph) {
         	var MorphTo = ORYX.Core.Command.extend({
     			construct: function(shape, stencil, facade){
     				this.shape = shape;
@@ -127,12 +134,12 @@ var KisBpmShapeSelectionCtrl = [ '$rootScope', '$scope', '$timeout', '$translate
     						}
     					}
     					
-    					if(newShape.maximumSize) {
-    						if(shape.bounds.height() > newShape.maximumSize.height) {
+    					if (newShape.maximumSize) {
+    						if (shape.bounds.height() > newShape.maximumSize.height) {
     							height = newShape.maximumSize.height;
     						}	
     						
-    						if(shape.bounds.width() > newShape.maximumSize.width) {
+    						if (shape.bounds.width() > newShape.maximumSize.width) {
     							width = newShape.maximumSize.width;
     						}
     					}
@@ -151,7 +158,7 @@ var KisBpmShapeSelectionCtrl = [ '$rootScope', '$scope', '$timeout', '$translate
     				}
     				
     				var oPos = shape.bounds.center();
-    				if(changedBounds !== null) {
+    				if (changedBounds !== null) {
     					newShape.bounds.set(changedBounds);
     				}
     				
@@ -171,22 +178,23 @@ var KisBpmShapeSelectionCtrl = [ '$rootScope', '$scope', '$timeout', '$translate
     				 * Change color to default if unchanged
     				 * 23.04.2010
     				 */
-    				if(shape.getStencil().property("oryx-bgcolor") 
+    				if (shape.getStencil().property("oryx-bgcolor") 
     						&& shape.properties["oryx-bgcolor"]
     						&& shape.getStencil().property("oryx-bgcolor").value().toUpperCase()== shape.properties["oryx-bgcolor"].toUpperCase()){
-    						if(newShape.getStencil().property("oryx-bgcolor")){
+    						if (newShape.getStencil().property("oryx-bgcolor")){
     							newShape.setProperty("oryx-bgcolor", newShape.getStencil().property("oryx-bgcolor").value());
     						}
-    				}	
-    				if(changedBounds !== null) {
+    				}
+    				
+    				if (changedBounds !== null) {
     					newShape.bounds.set(changedBounds);
     				}
     				
-    				if(newShape.getStencil().type()==="edge" || (newShape.dockers.length==0 || !newShape.dockers[0].getDockedShape())) {
+    				if (newShape.getStencil().type()==="edge" || (newShape.dockers.length==0 || !newShape.dockers[0].getDockedShape())) {
     					newShape.bounds.centerMoveTo(oPos);
     				} 
     				
-    				if(newShape.getStencil().type()==="node" && (newShape.dockers.length==0 || !newShape.dockers[0].getDockedShape())) {
+    				if (newShape.getStencil().type()==="node" && (newShape.dockers.length==0 || !newShape.dockers[0].getDockedShape())) {
     					this.setRelatedDockers(newShape, newShape);
     					
     				}
@@ -272,20 +280,16 @@ var KisBpmShapeSelectionCtrl = [ '$rootScope', '$scope', '$timeout', '$translate
         	var stencil = undefined;
         	var stencilSets = $scope.editor.getStencilSets().values();
         	
-        	var stencilId = $scope.selectedMorphShapes[0].id;
-        	if ($scope.selectedMorphShapes[0].genericTaskId)
-        	{
-        		stencilId = $scope.selectedMorphShapes[0].genericTaskId;
+        	var stencilId = $scope.currentSelectedMorph.id;
+        	if ($scope.currentSelectedMorph.genericTaskId) {
+        		stencilId = $scope.currentSelectedMorph.genericTaskId;
         	}
         	
-        	for (var i = 0; i < stencilSets.length; i++)
-        	{
+        	for (var i = 0; i < stencilSets.length; i++) {
         		var stencilSet = stencilSets[i];
     			var nodes = stencilSet.nodes();
-    			for (var j = 0; j < nodes.length; j++)
-            	{
-    				if (nodes[j].idWithoutNs() === stencilId)
-    				{
+    			for (var j = 0; j < nodes.length; j++) {
+    				if (nodes[j].idWithoutNs() === stencilId) {
     					stencil = nodes[j];
     					break;
     				}
@@ -311,4 +315,4 @@ var KisBpmShapeSelectionCtrl = [ '$rootScope', '$scope', '$timeout', '$translate
     	$scope.$hide();
     };
 
-}];
+}]);
